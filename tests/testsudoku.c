@@ -10,6 +10,8 @@ static const char* statusdescriptions[] = {
     [SUDOKU_INVALID_3X3] = "Invalid 3x3\n",
     [SUDOKU_INVALID_LINE] = "Invalid line\n",
     [SUDOKU_INVALID_COLUMN] = "Invalid column\n",
+    [SUDOKU_UNSOLVABLE] = "Unsolvable\n",
+    [SUDOKU_LAZY] = "Lazy\n",
 };
 
 int main(int argc, char** argv)
@@ -20,7 +22,7 @@ int main(int argc, char** argv)
     char buffer[BUFSIZ];
     int board[9][9];
     struct sudoku_err err;
-    enum sudoku_errno errno;
+    enum sudoku_errno errnum;
 
     if (argc >= 1 && argv[0][0] != '\0')
     {
@@ -78,11 +80,11 @@ int main(int argc, char** argv)
 
         fprintf(stderr, "%s: Solving board #%d...\n", programname, boardindex);
 
-        errno = solve_sudoku(board, &err);
+        errnum = solve_sudoku(board, &err);
 
-        if (strcmp(buffer, statusdescriptions[errno]) != 0)
+        if (strcmp(buffer, statusdescriptions[errnum]) != 0)
         {
-            switch (errno)
+            switch (errnum)
             {
                 case SUDOKU_OK:
                     fprintf(stderr, "%s: Sudoku solved!\n", programname);
@@ -99,8 +101,14 @@ int main(int argc, char** argv)
                 case SUDOKU_INVALID_COLUMN:
                     fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in column.\n", programname, board[err.cell_i][err.cell_j], err.cell_i + 1, err.cell_j + 1);
                     break;
+                case SUDOKU_UNSOLVABLE:
+                    fprintf(stderr, "%s: Board is unsolvable.\n", programname);
+                    break;
+                case SUDOKU_LAZY:
+                    fprintf(stderr, "%s: Too lazy to solve.\n", programname);
+                    break;
                 default:
-                    fprintf(stderr, "%s: Unknown error number %d returned by solve_sudoku.\n", programname, errno);
+                    fprintf(stderr, "%s: Unknown error number %d returned by solve_sudoku.\n", programname, errnum);
                     break;
             }
             status = EXIT_FAILURE;

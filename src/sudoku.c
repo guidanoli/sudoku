@@ -1,6 +1,7 @@
 #include "sudoku.h"
 
 #include <stddef.h>
+#include <stdbool.h>
 
 static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudoku_err* err)
 {
@@ -29,8 +30,8 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
     {
         for (int j = 0; j < 3; ++j)
         {
-            int present[10] = {0};
-            
+            bool taken[10] = {false};
+
             for (int k = 0; k < 3; ++k)
             {
                 for (int l = 0; l < 3; ++l)
@@ -39,7 +40,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
 
                     if (c >= 1 && c <= 9)
                     {
-                        if (present[c])
+                        if (taken[c])
                         {
                             if (err != NULL)
                             {
@@ -50,7 +51,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
                             return SUDOKU_INVALID_3X3;
                         }
 
-                        present[c] = 1;
+                        taken[c] = true;
                     }
                 }
             }
@@ -60,7 +61,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
     /* check for columns of cells */
     for (int i = 0; i < 9; ++i)
     {
-        int present[10] = {0};
+        int taken[10] = {false};
 
         for (int j = 0; j < 9; ++j)
         {
@@ -68,7 +69,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
 
             if (c >= 1 && c <= 9)
             {
-                if (present[c])
+                if (taken[c])
                 {
                     if (err != NULL)
                     {
@@ -79,7 +80,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
                     return SUDOKU_INVALID_COLUMN;
                 }
 
-                present[c] = 1;
+                taken[c] = true;
             }
         }
     }
@@ -87,7 +88,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
     /* check for lines of cells */
     for (int j = 0; j < 9; ++j)
     {
-        int present[10] = {0};
+        int taken[10] = {false};
 
         for (int i = 0; i < 9; ++i)
         {
@@ -95,7 +96,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
 
             if (c >= 1 && c <= 9)
             {
-                if (present[c])
+                if (taken[c])
                 {
                     if (err != NULL)
                     {
@@ -106,7 +107,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
                     return SUDOKU_INVALID_LINE;
                 }
 
-                present[c] = 1;
+                taken[c] = true;
             }
         }
     }
@@ -114,16 +115,132 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
     return SUDOKU_OK;
 }
 
-enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
+static void update_taken(bool taken[10][10][10], int i, int j, int c)
 {
+    /* 3x3 group */
     {
-        int status = check_invalid_board(board, err);
+        int gi = i-i%3, gj = j-j%3;
 
-        if (status != SUDOKU_OK)
+        for (int gii = 0; gii < 3; ++gii)
         {
-            return status;
+            int ii = gi+gii;
+
+            for (int gjj = 0; gjj < 3; ++gjj)
+            {
+                int jj = gj+gjj;
+                
+                taken[ii][jj][c] = true;
+            }
         }
     }
 
+    /* line */
+    for (int ii = 0; ii < 9; ++ii)
+    {
+        taken[ii][j][c] = true;
+    }
+
+    /* column */
+    for (int jj = 0; jj < 9; ++jj)
+    {
+        taken[i][jj][c] = true;
+    }
+}
+
+enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
+{
+    /* First, check whether the board is well-formed */
+    int status = check_invalid_board(board, err);
+
+    /* We keep a registry of all the taken numbers for every
+     * cell in the board. */
+    bool taken[10][10][10] = {false};
+
+    /* We also keep which cells are resolved */
+    bool resolved[10][10] = {false};
+
+    /* If the board is invalid, we just return */
+    if (status != SUDOKU_OK)
+    {
+        return status;
+    }
+
+    /* For every cell in the board, we mark out the cells in the same 3x3 group,
+     * in the same line, and in the same column so the value does not repeat */
+    for (int i = 0; i < 9; ++i)
+    {
+        for (int j = 0; j < 9; ++j)
+        {
+            int c = board[i][j];
+
+            if (c != 0)
+            {
+                resolved[i][j] = true;
+                update_taken(taken, i, j, c);
+            }
+        }
+    }
+
+    /* try finding cells with only one taken solution and
+     * update the taken and resolved matrices until there is such */
+    while (1)
+    {
+        bool resolved1 = false;
+
+        for (int i = 0; i < 9; ++i)
+        {
+            for (int j = 0; j < 9; ++j)
+            {
+                bool manyks = false;
+                int c = 0;
+
+                if (resolved[i][j])
+                {
+                    continue; /* cell is already resolved */
+                }
+
+                for (int k = 1; k <= 9; ++k)
+                {
+                    if (!taken[i][j][k])
+                    {
+                        if (c == 0)
+                        {
+                            /* first possible k */
+                            c = k;
+                        }
+                        else
+                        {
+                            /* second possible k */
+                            manyks = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (manyks)
+                {
+                    return SUDOKU_LAZY; /* zzz.. */
+                }
+
+                if (c == 0)
+                {
+                    return SUDOKU_UNSOLVABLE;
+                }
+                else
+                {
+                    resolved[i][j] = true;
+                    resolved1 = true;
+                    update_taken(taken, i, j, c);
+                    board[i][j] = c;
+                }
+            }
+        }
+
+        if (!resolved1)
+        {
+            break;
+        }
+    }
+    
     return SUDOKU_OK;
 }
