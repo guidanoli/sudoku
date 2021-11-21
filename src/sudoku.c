@@ -57,7 +57,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
         }
     }
 
-    /* check for lines of cells */
+    /* check for columns of cells */
     for (int i = 0; i < 9; ++i)
     {
         int present[10] = {0};
@@ -76,7 +76,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
                         err->cell_j = j;
                     }
 
-                    return SUDOKU_INVALID_LINE;
+                    return SUDOKU_INVALID_COLUMN;
                 }
 
                 present[c] = 1;
@@ -84,7 +84,7 @@ static enum sudoku_errno check_invalid_board(const int board[9][9], struct sudok
         }
     }
 
-    /* check for columns of cells */
+    /* check for lines of cells */
     for (int j = 0; j < 9; ++j)
     {
         int present[10] = {0};

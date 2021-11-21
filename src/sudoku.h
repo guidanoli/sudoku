@@ -6,7 +6,8 @@ enum sudoku_errno
     SUDOKU_OK, /* no problem */
     SUDOKU_INVALID_CELL, /* a cell is not between 0 and 9 */
     SUDOKU_INVALID_3X3, /* a cell is repeated in a 3x3 group */
-    SUDOKU_INVALID_LINE, /* a cell is repeated in a 3x3 group */
+    SUDOKU_INVALID_LINE, /* a cell is repeated in a line */
+    SUDOKU_INVALID_COLUMN, /* a cell is repeated in a column */
 };
 
 struct sudoku_err
