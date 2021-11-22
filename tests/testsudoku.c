@@ -3,16 +3,41 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 static const char* statusdescriptions[] = {
-    [SUDOKU_OK] = "Ok\n",
-    [SUDOKU_INVALID_CELL] = "Invalid cell\n",
-    [SUDOKU_INVALID_3X3] = "Invalid 3x3\n",
-    [SUDOKU_INVALID_LINE] = "Invalid line\n",
-    [SUDOKU_INVALID_COLUMN] = "Invalid column\n",
-    [SUDOKU_UNSOLVABLE] = "Unsolvable\n",
-    [SUDOKU_LAZY] = "Lazy\n",
+    [SUDOKU_OK] = "Ok",
+    [SUDOKU_INVALID_CELL] = "Invalid cell",
+    [SUDOKU_INVALID_3X3] = "Invalid 3x3",
+    [SUDOKU_INVALID_LINE] = "Invalid line",
+    [SUDOKU_INVALID_COLUMN] = "Invalid column",
+    [SUDOKU_UNSOLVABLE] = "Unsolvable",
+    [SUDOKU_LAZY] = "Lazy",
 };
+
+static void remove_endl(char* str)
+{
+    size_t len = strlen(str);
+    size_t i;
+
+    if (len == 0) return;
+
+    /* string is not empty */
+
+    i = len - 1;
+
+    if (str[i] != '\n') return;
+
+    /* string's end contains '\n'
+     * and i points to first '\n' known */
+
+    while (i > 0 && str[i-1] == '\n')
+    {
+        i--;
+    }
+
+    str[i] = '\0';
+}
 
 int main(int argc, char** argv)
 {
@@ -59,7 +84,7 @@ int main(int argc, char** argv)
             break; /* No more boards */
         }
 
-        fprintf(stderr, "%s: Reading board #%d...\n", programname, boardindex);
+        remove_endl(buffer);
 
         while (cellabsindex < 81 && fscanf(testfile, " %d", &cellvalue) == 1)
         {
@@ -78,9 +103,11 @@ int main(int argc, char** argv)
             break;
         }
 
-        fprintf(stderr, "%s: Solving board #%d...\n", programname, boardindex);
+        printf("Solving board #%d... ", boardindex);
 
         errnum = solve_sudoku(board, &err);
+
+        printf("%s\n", statusdescriptions[errnum]);
 
         if (strcmp(buffer, statusdescriptions[errnum]) != 0)
         {
@@ -114,6 +141,44 @@ int main(int argc, char** argv)
             status = EXIT_FAILURE;
             break;
         }
+
+        if (errnum == SUDOKU_OK)
+        {
+            bool matches = true;
+            cellabsindex = 0;
+
+            fscanf(testfile, " ");
+
+            while (cellabsindex < 81 && fscanf(testfile, " %d", &cellvalue) == 1)
+            {
+                int cell_i = cellabsindex / 9;
+                int cell_j = cellabsindex % 9;
+
+                if (board[cell_i][cell_j] != cellvalue)
+                {
+                    fprintf(stderr, "%s: Cell (%d,%d) is different from solution (actual=%d, expected=%d).\n", programname, cell_i + 1, cell_j + 1, board[cell_i][cell_j], cellvalue);
+                    matches = false;
+                    status = EXIT_FAILURE;
+                    break;
+                }
+
+                cellabsindex++;
+            }
+
+            if (!matches)
+            {
+                break;
+            }
+
+            if (cellabsindex < 81)
+            {
+                fprintf(stderr, "%s: Expected board with 81 cells.\n", programname);
+                status = EXIT_FAILURE;
+                break;
+            }
+
+        }
+
     }
 
     fclose(testfile);
