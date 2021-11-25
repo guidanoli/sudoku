@@ -8,6 +8,5 @@ const char* statusdescriptions[] = {
     [SUDOKU_INVALID_LINE] = "Invalid line",
     [SUDOKU_INVALID_COLUMN] = "Invalid column",
     [SUDOKU_UNSOLVABLE] = "Unsolvable",
-    [SUDOKU_LAZY] = "Lazy",
 };
 
