@@ -5,21 +5,21 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-static enum sudoku_errno check_board(int board[9][9], struct sudoku_err* err)
+static enum sudoku_errno check_board(uint8_t board[9][9], struct sudoku_cell* badcell)
 {
     /* check invalid values for each cell */
-    for (int i = 0; i < 9; ++i)
+    for (uint8_t i = 0; i < 9; ++i)
     {
-        for (int j = 0; j < 9; ++j)
+        for (uint8_t j = 0; j < 9; ++j)
         {
-            int c = board[i][j];
+            uint8_t c = board[i][j];
 
             if (!(c >= 0 && c <= 9))
             {
-                if (err != NULL)
+                if (badcell != NULL)
                 {
-                    err->cell_i = i;
-                    err->cell_j = j;
+                    badcell->i = i;
+                    badcell->j = j;
                 }
 
                 return SUDOKU_INVALID_CELL;
@@ -28,32 +28,32 @@ static enum sudoku_errno check_board(int board[9][9], struct sudoku_err* err)
     }
 
     /* check for 3x3 cell groups */
-    for (int i = 0; i < 3; ++i)
+    for (uint8_t i = 0; i < 9; i += 3)
     {
-        for (int j = 0; j < 3; ++j)
+        for (uint8_t j = 0; j < 9; j += 3)
         {
             uint16_t taken = 0;
 
-            for (int k = 0; k < 3; ++k)
+            for (uint8_t k = 0; k < 3; ++k)
             {
-                for (int l = 0; l < 3; ++l)
+                for (uint8_t l = 0; l < 3; ++l)
                 {
-                    int c = board[3*i+k][3*j+l];
+                    uint8_t c = board[i+k][j+l];
 
                     if (c != 0)
                     {
-                        if (taken & (1 << c))
+                        if (taken & ((uint16_t)1 << c))
                         {
-                            if (err != NULL)
+                            if (badcell != NULL)
                             {
-                                err->cell_i = 3*i+k;
-                                err->cell_j = 3*j+l;
+                                badcell->i = i+k;
+                                badcell->j = j+l;
                             }
 
                             return SUDOKU_INVALID_3X3;
                         }
 
-                        taken |= (1 << c);
+                        taken |= ((uint16_t)1 << c);
                     }
                 }
             }
@@ -61,55 +61,55 @@ static enum sudoku_errno check_board(int board[9][9], struct sudoku_err* err)
     }
 
     /* check for columns of cells */
-    for (int i = 0; i < 9; ++i)
+    for (uint8_t i = 0; i < 9; ++i)
     {
         uint16_t taken = 0;
 
-        for (int j = 0; j < 9; ++j)
+        for (uint8_t j = 0; j < 9; ++j)
         {
-            int c = board[i][j];
+            uint8_t c = board[i][j];
 
             if (c != 0)
             {
-                if (taken & (1 << c))
+                if (taken & ((uint16_t)1 << c))
                 {
-                    if (err != NULL)
+                    if (badcell != NULL)
                     {
-                        err->cell_i = i;
-                        err->cell_j = j;
+                        badcell->i = i;
+                        badcell->j = j;
                     }
 
                     return SUDOKU_INVALID_COLUMN;
                 }
 
-                taken |= (1 << c);
+                taken |= ((uint16_t)1 << c);
             }
         }
     }
 
     /* check for lines of cells */
-    for (int j = 0; j < 9; ++j)
+    for (uint8_t j = 0; j < 9; ++j)
     {
         uint16_t taken = 0;
 
-        for (int i = 0; i < 9; ++i)
+        for (uint8_t i = 0; i < 9; ++i)
         {
-            int c = board[i][j];
+            uint8_t c = board[i][j];
 
             if (c != 0)
             {
-                if (taken & (1 << c))
+                if (taken & ((uint16_t)1 << c))
                 {
-                    if (err != NULL)
+                    if (badcell != NULL)
                     {
-                        err->cell_i = i;
-                        err->cell_j = j;
+                        badcell->i = i;
+                        badcell->j = j;
                     }
 
                     return SUDOKU_INVALID_LINE;
                 }
 
-                taken |= (1 << c);
+                taken |= ((uint16_t)1 << c);
             }
         }
     }
@@ -117,7 +117,7 @@ static enum sudoku_errno check_board(int board[9][9], struct sudoku_err* err)
     return SUDOKU_OK;
 }
 
-static enum sudoku_errno solve_sudoku_recursively(int board[9][9])
+static enum sudoku_errno solve_sudoku_recursively(uint8_t board[9][9])
 {
     /* The global matrix of taken numbers
      * each cell [i,j] corresponds to a bitmap of the numbers
@@ -125,23 +125,23 @@ static enum sudoku_errno solve_sudoku_recursively(int board[9][9])
     uint16_t gtaken[9][9] = {0};
 
     /* check for 3x3 cell groups */
-    for (int i = 0; i < 9; i += 3)
+    for (uint8_t i = 0; i < 9; i += 3)
     {
-        for (int j = 0; j < 9; j += 3)
+        for (uint8_t j = 0; j < 9; j += 3)
         {
             uint16_t taken = 0;
 
-            for (int k = 0; k < 3; ++k)
+            for (uint8_t k = 0; k < 3; ++k)
             {
-                for (int l = 0; l < 3; ++l)
+                for (uint8_t l = 0; l < 3; ++l)
                 {
-                    taken |= (1 << board[i+k][j+l]);
+                    taken |= ((uint16_t)1 << board[i+k][j+l]);
                 }
             }
 
-            for (int k = 0; k < 3; ++k)
+            for (uint8_t k = 0; k < 3; ++k)
             {
-                for (int l = 0; l < 3; ++l)
+                for (uint8_t l = 0; l < 3; ++l)
                 {
                     gtaken[i+k][j+l] |= taken;
                 }
@@ -150,53 +150,53 @@ static enum sudoku_errno solve_sudoku_recursively(int board[9][9])
     }
 
     /* check for columns of cells */
-    for (int i = 0; i < 9; ++i)
+    for (uint8_t i = 0; i < 9; ++i)
     {
         uint16_t taken = 0;
 
-        for (int j = 0; j < 9; ++j)
+        for (uint8_t j = 0; j < 9; ++j)
         {
-            taken |= (1 << board[i][j]);
+            taken |= ((uint16_t)1 << board[i][j]);
         }
 
-        for (int j = 0; j < 9; ++j)
+        for (uint8_t j = 0; j < 9; ++j)
         {
             gtaken[i][j] |= taken;
         }
     }
 
     /* check for lines of cells */
-    for (int j = 0; j < 9; ++j)
+    for (uint8_t j = 0; j < 9; ++j)
     {
         uint16_t taken = 0;
 
-        for (int i = 0; i < 9; ++i)
+        for (uint8_t i = 0; i < 9; ++i)
         {
-            taken |= (1 << board[i][j]);
+            taken |= ((uint16_t)1 << board[i][j]);
         }
 
-        for (int i = 0; i < 9; ++i)
+        for (uint8_t i = 0; i < 9; ++i)
         {
             gtaken[i][j] |= taken;
         }
     }
 
     /* Solve for each cell */
-    for (int i = 0; i < 9; ++i)
+    for (uint8_t i = 0; i < 9; ++i)
     {
-        for (int j = 0; j < 9; ++j)
+        for (uint8_t j = 0; j < 9; ++j)
         {
             if (board[i][j] == 0)
             {
                 uint16_t taken = gtaken[i][j];
 
-                for (int c = 1; c <= 9; ++c)
+                for (uint8_t c = 1; c <= 9; ++c)
                 {
-                    if (!(taken & (1 << c)))
+                    if (!(taken & ((uint16_t)1 << c)))
                     {
                         board[i][j] = c;
 
-                        if (solve_sudoku_recursively(board))
+                        if (solve_sudoku_recursively(board) == SUDOKU_OK)
                         {
                             /* The board is solved! */
                             return SUDOKU_OK;
@@ -215,9 +215,9 @@ static enum sudoku_errno solve_sudoku_recursively(int board[9][9])
     return SUDOKU_OK;
 }
 
-enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
+enum sudoku_errno solve_sudoku(uint8_t board[9][9], struct sudoku_cell* badcell)
 {
-    enum sudoku_errno status = check_board(board, err);
+    enum sudoku_errno status = check_board(board, badcell);
 
     if (status != SUDOKU_OK)
     {

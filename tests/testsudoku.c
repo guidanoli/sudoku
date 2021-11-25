@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 static void remove_endl(char* str)
 {
@@ -36,8 +37,8 @@ int main(int argc, char** argv)
     FILE* testfile;
     int status = EXIT_SUCCESS;
     char buffer[BUFSIZ];
-    int board[9][9], board2[9][9];
-    struct sudoku_err err;
+    uint8_t board[9][9], board2[9][9];
+    struct sudoku_cell badcell;
     enum sudoku_errno errnum;
 
     if (argc >= 1 && argv[0][0] != '\0')
@@ -65,8 +66,8 @@ int main(int argc, char** argv)
 
     for (int boardindex = 1; ; ++boardindex)
     {
-        int cellvalue;
-        int cellabsindex = 0;
+        uint8_t cellvalue;
+        uint8_t cellabsindex = 0;
 
         fscanf(testfile, " ");
 
@@ -77,10 +78,10 @@ int main(int argc, char** argv)
 
         remove_endl(buffer);
 
-        while (cellabsindex < 81 && fscanf(testfile, " %d", &cellvalue) == 1)
+        while (cellabsindex < 81 && fscanf(testfile, " %" SCNu8, &cellvalue) == 1)
         {
-            int cell_i = cellabsindex / 9;
-            int cell_j = cellabsindex % 9;
+            uint8_t cell_i = cellabsindex / 9;
+            uint8_t cell_j = cellabsindex % 9;
 
             board[cell_i][cell_j] = cellvalue;
 
@@ -97,9 +98,9 @@ int main(int argc, char** argv)
         printf("Solving board #%d... ", boardindex);
 
         /* Before solving, store it */
-        memcpy(board2, board, sizeof(int)*81);
+        memcpy(board2, board, sizeof(uint8_t)*81);
 
-        errnum = solve_sudoku(board, &err);
+        errnum = solve_sudoku(board, &badcell);
 
         printf("%s\n", statusdescriptions[errnum]);
 
@@ -111,16 +112,16 @@ int main(int argc, char** argv)
                     fprintf(stderr, "%s: Sudoku solved!\n", programname);
                     break;
                 case SUDOKU_INVALID_CELL:
-                    fprintf(stderr, "%s: Cell (%d,%d) has invalid value %d.\n", programname, err.cell_i + 1, err.cell_j + 1, board[err.cell_i][err.cell_j]);
+                    fprintf(stderr, "%s: Cell (%d,%d) has invalid value %d.\n", programname, badcell.i+1, badcell.j+1, board[badcell.i][badcell.j]);
                     break;
                 case SUDOKU_INVALID_3X3:
-                    fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in 3x3 group.\n", programname, board[err.cell_i][err.cell_j], err.cell_i + 1, err.cell_j + 1);
+                    fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in 3x3 group.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
                     break;
                 case SUDOKU_INVALID_LINE:
-                    fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in line.\n", programname, board[err.cell_i][err.cell_j], err.cell_i + 1, err.cell_j + 1);
+                    fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in line.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
                     break;
                 case SUDOKU_INVALID_COLUMN:
-                    fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in column.\n", programname, board[err.cell_i][err.cell_j], err.cell_i + 1, err.cell_j + 1);
+                    fprintf(stderr, "%s: Repeated %d in cell (%d,%d) in column.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
                     break;
                 case SUDOKU_UNSOLVABLE:
                     fprintf(stderr, "%s: Board is unsolvable.\n", programname);
@@ -135,20 +136,20 @@ int main(int argc, char** argv)
 
         if (errnum == SUDOKU_OK)
         {
-            for (int i = 0; i < 9; ++i)
+            for (uint8_t i = 0; i < 9; ++i)
             {
                 bool taken_line[10] = {false};
                 bool taken_column[10] = {false};
                 bool taken_group[10] = {false};
 
-                for (int j = 0; j < 9; ++j)
+                for (uint8_t j = 0; j < 9; ++j)
                 {
-                    int c = board[i][j];
-                    int c2 = board2[i][j];
-                    int c3 = board[j][i];
-                    int gi = (i/3)*3 + j/3;
-                    int gj = (i%3)*3 + j%3;
-                    int c4 = board[gi][gj];
+                    uint8_t c = board[i][j];
+                    uint8_t c2 = board2[i][j];
+                    uint8_t c3 = board[j][i];
+                    uint8_t gi = (i/3)*3 + j/3;
+                    uint8_t gj = (i%3)*3 + j%3;
+                    uint8_t c4 = board[gi][gj];
 
                     if (!(c >= 1 && c <= 9))
                     {

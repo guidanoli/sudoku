@@ -1,6 +1,8 @@
 #ifndef sudoku_h
 #define sudoku_h
 
+#include <stdint.h>
+
 enum sudoku_errno
 {
     SUDOKU_OK, /* board was solved in-place */
@@ -11,17 +13,17 @@ enum sudoku_errno
     SUDOKU_UNSOLVABLE, /* it is impossible to solve such board */
 };
 
-struct sudoku_err
+struct sudoku_cell
 {
-    int cell_i;
-    int cell_j;
+    uint8_t i;
+    uint8_t j;
 };
 
 /* Try to solve a sudoku board in-place
  * Returns an error number or 0 on success
  * If the error is SUDOKU_INVALID_*, the coordinates
- * of the faulting cell are stored in err by reference.
+ * of the faulting cell are stored in badcell by reference.
  * On success, the solution is written in-place. */
-enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err);
+enum sudoku_errno solve_sudoku(uint8_t board[9][9], struct sudoku_cell* badcell);
 
 #endif

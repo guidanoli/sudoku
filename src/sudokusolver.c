@@ -5,6 +5,35 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <inttypes.h>
+
+static void print_board(uint8_t board[9][9])
+{
+    for (uint8_t i = 0; i < 9; ++i)
+    {
+        for (uint8_t j = 0; j < 9; ++j)
+        {
+            printf("%d", board[i][j]);
+            
+            if (j < 8)
+            {
+                fputc(' ', stdout);
+
+                if (j % 3 == 2)
+                {
+                    fputc(' ', stdout);
+                }
+            }
+        }
+
+        fputc('\n', stdout);
+
+        if (i < 8 && i % 3 == 2)
+        {
+            fputc('\n', stdout);
+        }
+    }
+}
 
 int main(int argc, char** argv)
 {
@@ -12,8 +41,8 @@ int main(int argc, char** argv)
     bool canclosefile;
     FILE* testfile;
     int status = EXIT_SUCCESS;
-    int board[9][9];
-    struct sudoku_err err;
+    uint8_t board[9][9];
+    struct sudoku_cell badcell;
     enum sudoku_errno errnum;
 
     if (argc >= 1 && argv[0][0] != '\0')
@@ -44,67 +73,62 @@ int main(int argc, char** argv)
 
     for (int boardindex = 1; ; ++boardindex)
     {
-        int cellvalue;
-        int cellabsindex = 0;
+        uint8_t value;
+        uint8_t absindex = 0;
+        uint8_t i, j;
 
-        while (cellabsindex < 81 && fscanf(testfile, " %d", &cellvalue) == 1)
+        while (absindex < 81 && fscanf(testfile, " %" SCNu8, &value) == 1)
         {
-            int cell_i = cellabsindex / 9;
-            int cell_j = cellabsindex % 9;
+            i = absindex / 9;
+            j = absindex % 9;
 
-            board[cell_i][cell_j] = cellvalue;
+            board[i][j] = value;
 
-            cellabsindex++;
+            absindex++;
         }
 
-        if (cellabsindex == 0)
+        if (absindex == 0)
         {
             break; /* no more boards */
         }
 
-        if (cellabsindex < 81)
+        if (absindex < 81)
         {
             fprintf(stderr, "%s: Expected board with 81 cells.\n", programname);
             status = EXIT_FAILURE;
             break;
         }
 
-        fprintf(stderr, "Solving board #%d... ", boardindex);
+        printf("Solving board #%d... ", boardindex);
 
-        errnum = solve_sudoku(board, &err);
+        errnum = solve_sudoku(board, &badcell);
 
-        fprintf(stderr, "%s\n", statusdescriptions[errnum]);
+        printf("%s\n", statusdescriptions[errnum]);
 
-        if (errnum != SUDOKU_OK)
+        switch (errnum)
         {
-            break;
-        }
-
-        printf("Solution for board #%d\n\n", boardindex);
-
-        for (int i = 0; i < 9; ++i)
-        {
-            for (int j = 0; j < 9; ++j)
-            {
-                printf("%d", board[i][j]);
-                
-                if (j < 8)
-                {
-                    fputc(' ', stdout);
-
-                    if (j % 3 == 2)
-                    {
-                        fputc(' ', stdout);
-                    }
-                }
-            }
-
-            fputc('\n', stdout);
-
-            if (i < 8 && i % 3 == 2)
-            {
-                fputc('\n', stdout);
-            }
+            case SUDOKU_OK:
+                printf("Solution for board #%d\n\n", boardindex);
+                print_board(board);
+                break;
+            case SUDOKU_INVALID_CELL:
+                fprintf(stderr, "%s: Cell (%d,%d) has invalid value %d.\n", programname, badcell.i+1, badcell.j+1, board[badcell.i][badcell.j]);
+                break;
+            case SUDOKU_INVALID_3X3:
+                fprintf(stderr, "%s: Repeated %d in  (%d,%d) in 3x3 group.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
+                break;
+            case SUDOKU_INVALID_LINE:
+                fprintf(stderr, "%s: Repeated %d in  (%d,%d) in line.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
+                break;
+            case SUDOKU_INVALID_COLUMN:
+                fprintf(stderr, "%s: Repeated %d in  (%d,%d) in column.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
+                break;
+            case SUDOKU_UNSOLVABLE:
+                fprintf(stderr, "%s: Board is unsolvable.\n", programname);
+                break;
+            default:
+                fprintf(stderr, "%s: Unknown error number %d returned by solve_sudoku.\n", programname, errnum);
+                break;
         }
     }
 
