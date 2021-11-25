@@ -32,7 +32,7 @@ static void remove_endl(char* str)
 
 int main(int argc, char** argv)
 {
-    char* programname;
+    const char* programname;
     FILE* testfile;
     int status = EXIT_SUCCESS;
     char buffer[BUFSIZ];

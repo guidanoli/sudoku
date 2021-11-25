@@ -8,7 +8,7 @@
 
 int main(int argc, char** argv)
 {
-    char* programname;
+    const char* programname;
     bool canclosefile;
     FILE* testfile;
     int status = EXIT_SUCCESS;

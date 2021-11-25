@@ -1,6 +1,7 @@
 #include "sudoku.h"
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
@@ -119,8 +120,21 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
         {
             if (board[i][j] == 0)
             {
-                for (int c = 1; c <= 9; ++c)
+                bool tried[10] = {false};
+                int tried_cnt = 0;
+
+                while (tried_cnt < 9)
                 {
+                    int c;
+
+                    do
+                    {
+                        c = rand() % 9 + 1;
+                    }
+                    while (tried[c]);
+
+                    tried[c] = true;
+                    ++tried_cnt;
                     board[i][j] = c;
 
                     /* Found a solution! */
