@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     FILE* testfile;
     int status = EXIT_SUCCESS;
     char buffer[BUFSIZ];
-    int board[9][9];
+    int board[9][9], board2[9][9];
     struct sudoku_err err;
     enum sudoku_errno errnum;
 
@@ -96,6 +96,9 @@ int main(int argc, char** argv)
 
         printf("Solving board #%d... ", boardindex);
 
+        /* Before solving, store it */
+        memcpy(board2, board, sizeof(int)*81);
+
         errnum = solve_sudoku(board, &err);
 
         printf("%s\n", statusdescriptions[errnum]);
@@ -122,9 +125,6 @@ int main(int argc, char** argv)
                 case SUDOKU_UNSOLVABLE:
                     fprintf(stderr, "%s: Board is unsolvable.\n", programname);
                     break;
-                case SUDOKU_LAZY:
-                    fprintf(stderr, "%s: Too lazy to solve.\n", programname);
-                    break;
                 default:
                     fprintf(stderr, "%s: Unknown error number %d returned by solve_sudoku.\n", programname, errnum);
                     break;
@@ -135,39 +135,63 @@ int main(int argc, char** argv)
 
         if (errnum == SUDOKU_OK)
         {
-            bool matches = true;
-            cellabsindex = 0;
-
-            fscanf(testfile, " ");
-
-            while (cellabsindex < 81 && fscanf(testfile, " %d", &cellvalue) == 1)
+            for (int i = 0; i < 9; ++i)
             {
-                int cell_i = cellabsindex / 9;
-                int cell_j = cellabsindex % 9;
+                bool taken_line[10] = {false};
+                bool taken_column[10] = {false};
+                bool taken_group[10] = {false};
 
-                if (board[cell_i][cell_j] != cellvalue)
+                for (int j = 0; j < 9; ++j)
                 {
-                    fprintf(stderr, "%s: Cell (%d,%d) is different from solution (actual=%d, expected=%d).\n", programname, cell_i + 1, cell_j + 1, board[cell_i][cell_j], cellvalue);
-                    matches = false;
-                    status = EXIT_FAILURE;
-                    break;
+                    int c = board[i][j];
+                    int c2 = board2[i][j];
+                    int c3 = board[j][i];
+                    int gi = (i/3)*3 + j/3;
+                    int gj = (i%3)*3 + j%3;
+                    int c4 = board[gi][gj];
+
+                    if (!(c >= 1 && c <= 9))
+                    {
+                        fprintf(stderr, "%s: Solution has invalid cell (%d,%d)\n", programname, i + 1, j + 1);
+                        status = EXIT_FAILURE;
+                        break;
+                    }
+
+                    if (taken_line[c])
+                    {
+                        fprintf(stderr, "%s: Solution has invalid line (%d,%d)\n", programname, i + 1, j + 1);
+                        status = EXIT_FAILURE;
+                        break;
+                    }
+
+                    taken_line[c] = true;
+
+                    if (taken_column[c3])
+                    {
+                        fprintf(stderr, "%s: Solution has invalid line (%d,%d)\n", programname, j + 1, i + 1);
+                        status = EXIT_FAILURE;
+                        break;
+                    }
+
+                    taken_column[c3] = true;
+
+                    if (taken_group[c4])
+                    {
+                        fprintf(stderr, "%s: Solution has invalid line (%d,%d)\n", programname, gi + 1, gj + 1);
+                        status = EXIT_FAILURE;
+                        break;
+                    }
+
+                    taken_group[c4] = true;
+
+                    if (c2 != 0 && c != c2)
+                    {
+                        fprintf(stderr, "%s: Solution has overriden cell (%d,%d) -- was %d now is %d\n", programname, i + 1, j + 1, c2, c);
+                        status = EXIT_FAILURE;
+                        break;
+                    }
                 }
-
-                cellabsindex++;
             }
-
-            if (!matches)
-            {
-                break;
-            }
-
-            if (cellabsindex < 81)
-            {
-                fprintf(stderr, "%s: Expected board with 81 cells.\n", programname);
-                status = EXIT_FAILURE;
-                break;
-            }
-
         }
 
     }

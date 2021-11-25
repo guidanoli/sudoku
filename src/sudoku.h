@@ -9,7 +9,6 @@ enum sudoku_errno
     SUDOKU_INVALID_LINE, /* a cell is repeated in a line */
     SUDOKU_INVALID_COLUMN, /* a cell is repeated in a column */
     SUDOKU_UNSOLVABLE, /* it is impossible to solve such board */
-    SUDOKU_LAZY, /* I am too lazy to solve it :-) */
 };
 
 struct sudoku_err
