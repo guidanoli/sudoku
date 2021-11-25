@@ -3,8 +3,9 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
+static enum sudoku_errno check_board(int board[9][9], struct sudoku_err* err)
 {
     /* check invalid values for each cell */
     for (int i = 0; i < 9; ++i)
@@ -31,7 +32,7 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
     {
         for (int j = 0; j < 3; ++j)
         {
-            bool taken[10] = {false};
+            uint16_t taken = 0;
 
             for (int k = 0; k < 3; ++k)
             {
@@ -39,9 +40,9 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
                 {
                     int c = board[3*i+k][3*j+l];
 
-                    if (c >= 1 && c <= 9)
+                    if (c != 0)
                     {
-                        if (taken[c])
+                        if (taken & (1 << c))
                         {
                             if (err != NULL)
                             {
@@ -52,7 +53,7 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
                             return SUDOKU_INVALID_3X3;
                         }
 
-                        taken[c] = true;
+                        taken |= (1 << c);
                     }
                 }
             }
@@ -62,15 +63,15 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
     /* check for columns of cells */
     for (int i = 0; i < 9; ++i)
     {
-        int taken[10] = {false};
+        uint16_t taken = 0;
 
         for (int j = 0; j < 9; ++j)
         {
             int c = board[i][j];
 
-            if (c >= 1 && c <= 9)
+            if (c != 0)
             {
-                if (taken[c])
+                if (taken & (1 << c))
                 {
                     if (err != NULL)
                     {
@@ -81,7 +82,7 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
                     return SUDOKU_INVALID_COLUMN;
                 }
 
-                taken[c] = true;
+                taken |= (1 << c);
             }
         }
     }
@@ -89,15 +90,15 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
     /* check for lines of cells */
     for (int j = 0; j < 9; ++j)
     {
-        int taken[10] = {false};
+        uint16_t taken = 0;
 
         for (int i = 0; i < 9; ++i)
         {
             int c = board[i][j];
 
-            if (c >= 1 && c <= 9)
+            if (c != 0)
             {
-                if (taken[c])
+                if (taken & (1 << c))
                 {
                     if (err != NULL)
                     {
@@ -108,49 +109,120 @@ enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
                     return SUDOKU_INVALID_LINE;
                 }
 
-                taken[c] = true;
+                taken |= (1 << c);
             }
         }
     }
 
-    /* Find first non-solved cell */
+    return SUDOKU_OK;
+}
+
+static enum sudoku_errno solve_sudoku_recursively(int board[9][9])
+{
+    /* The global matrix of taken numbers
+     * each cell [i,j] corresponds to a bitmap of the numbers
+     * that are no longer possible to be filled on the board */
+    uint16_t gtaken[9][9] = {0};
+
+    /* check for 3x3 cell groups */
+    for (int i = 0; i < 9; i += 3)
+    {
+        for (int j = 0; j < 9; j += 3)
+        {
+            uint16_t taken = 0;
+
+            for (int k = 0; k < 3; ++k)
+            {
+                for (int l = 0; l < 3; ++l)
+                {
+                    taken |= (1 << board[i+k][j+l]);
+                }
+            }
+
+            for (int k = 0; k < 3; ++k)
+            {
+                for (int l = 0; l < 3; ++l)
+                {
+                    gtaken[i+k][j+l] |= taken;
+                }
+            }
+        }
+    }
+
+    /* check for columns of cells */
+    for (int i = 0; i < 9; ++i)
+    {
+        uint16_t taken = 0;
+
+        for (int j = 0; j < 9; ++j)
+        {
+            taken |= (1 << board[i][j]);
+        }
+
+        for (int j = 0; j < 9; ++j)
+        {
+            gtaken[i][j] |= taken;
+        }
+    }
+
+    /* check for lines of cells */
+    for (int j = 0; j < 9; ++j)
+    {
+        uint16_t taken = 0;
+
+        for (int i = 0; i < 9; ++i)
+        {
+            taken |= (1 << board[i][j]);
+        }
+
+        for (int i = 0; i < 9; ++i)
+        {
+            gtaken[i][j] |= taken;
+        }
+    }
+
+    /* Solve for each cell */
     for (int i = 0; i < 9; ++i)
     {
         for (int j = 0; j < 9; ++j)
         {
             if (board[i][j] == 0)
             {
-                bool tried[10] = {false};
-                int tried_cnt = 0;
+                uint16_t taken = gtaken[i][j];
 
-                while (tried_cnt < 9)
+                for (int c = 1; c <= 9; ++c)
                 {
-                    int c;
-
-                    do
+                    if (!(taken & (1 << c)))
                     {
-                        c = rand() % 9 + 1;
-                    }
-                    while (tried[c]);
+                        board[i][j] = c;
 
-                    tried[c] = true;
-                    ++tried_cnt;
-                    board[i][j] = c;
-
-                    /* Found a solution! */
-                    if (solve_sudoku(board, NULL) == SUDOKU_OK)
-                    {
-                        return SUDOKU_OK;
+                        if (solve_sudoku_recursively(board))
+                        {
+                            /* The board is solved! */
+                            return SUDOKU_OK;
+                        }
                     }
                 }
 
-                /* Dead-end! */
+                /* Could not solve board */
                 board[i][j] = 0;
                 return SUDOKU_UNSOLVABLE;
             }
         }
     }
-
-    /* No empty cells! */
+    
+    /* There are no empty cells -- the board is solved! */
     return SUDOKU_OK;
+}
+
+enum sudoku_errno solve_sudoku(int board[9][9], struct sudoku_err* err)
+{
+    enum sudoku_errno status = check_board(board, err);
+
+    if (status != SUDOKU_OK)
+    {
+        return status;
+    }
+
+    return solve_sudoku_recursively(board);
 }
