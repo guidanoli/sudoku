@@ -14,7 +14,7 @@ static int min_num_cells = 18;
 static int max_num_cells = 30;
 static int num_boards = 1;
 static uint8_t board[9][9];
-static uint16_t taken[10][10];
+static uint16_t taken[9][9];
 
 static void print_board()
 {
@@ -197,7 +197,7 @@ int main(int argc_, char** argv_)
 
         /* Clear board and taken */
         memset(board, 0, sizeof(uint8_t)*81);
-        memset(taken, 0, sizeof(uint16_t)*100);
+        memset(taken, 0, sizeof(uint16_t)*81);
 
         /* Generate board */
         int num_cells = randint(min_num_cells, max_num_cells);

@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     char buffer[BUFSIZ];
     uint8_t board[9][9], board2[9][9];
     struct sudoku_cell badcell;
-    enum sudoku_errno errnum;
+    enum sudoku_ret errnum;
 
     if (argc >= 1 && argv[0][0] != '\0')
     {

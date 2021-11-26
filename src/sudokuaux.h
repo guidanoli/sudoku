@@ -1,6 +1,8 @@
 #ifndef sudokuaux_h
 #define sudokuaux_h
 
-extern const char* statusdescriptions[];
+#include "sudoku.h"
+
+extern const char* statusdescriptions[SUDOKU_MAX];
 
 #endif

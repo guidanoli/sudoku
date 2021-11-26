@@ -6,9 +6,19 @@
 #include <string.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <signal.h>
 
-static void print_board(uint8_t board[9][9])
+static uint8_t board[9][9];
+
+static void sigint_handler(int signo)
 {
+    abort_solve_sudoku = 1;
+}
+
+static void print_board()
+{
+    putchar('\n');
+
     for (uint8_t i = 0; i < 9; ++i)
     {
         for (uint8_t j = 0; j < 9; ++j)
@@ -41,9 +51,8 @@ int main(int argc, char** argv)
     bool canclosefile;
     FILE* testfile;
     int status = EXIT_SUCCESS;
-    uint8_t board[9][9];
     struct sudoku_cell badcell;
-    enum sudoku_errno errnum;
+    enum sudoku_ret errnum;
 
     if (argc >= 1 && argv[0][0] != '\0')
     {
@@ -70,6 +79,8 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
     }
+
+    signal(SIGINT, sigint_handler);
 
     for (int boardindex = 1; ; ++boardindex)
     {
@@ -99,35 +110,28 @@ int main(int argc, char** argv)
             break;
         }
 
-        printf("Solving board #%d... ", boardindex);
+        fprintf(stderr, "\n%d: ", boardindex);
 
         errnum = solve_sudoku(board, &badcell);
 
-        printf("%s\n", statusdescriptions[errnum]);
+        fprintf(stderr, "%s\n", statusdescriptions[errnum]);
 
         switch (errnum)
         {
             case SUDOKU_OK:
-                printf("Solution for board #%d\n\n", boardindex);
-                print_board(board);
+                print_board();
                 break;
             case SUDOKU_INVALID_CELL:
-                fprintf(stderr, "%s: Cell (%d,%d) has invalid value %d.\n", programname, badcell.i+1, badcell.j+1, board[badcell.i][badcell.j]);
-                break;
             case SUDOKU_INVALID_3X3:
-                fprintf(stderr, "%s: Repeated %d in  (%d,%d) in 3x3 group.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
-                break;
             case SUDOKU_INVALID_LINE:
-                fprintf(stderr, "%s: Repeated %d in  (%d,%d) in line.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
-                break;
             case SUDOKU_INVALID_COLUMN:
-                fprintf(stderr, "%s: Repeated %d in  (%d,%d) in column.\n", programname, board[badcell.i][badcell.j], badcell.i+1, badcell.j+1);
+                fprintf(stderr, "Cell (%" PRIu8 ",%" PRIu8 ") = %" PRIu8 "\n",
+                        badcell.i + 1, badcell.j + 1, board[badcell.i][badcell.j]);
                 break;
             case SUDOKU_UNSOLVABLE:
-                fprintf(stderr, "%s: Board is unsolvable.\n", programname);
                 break;
-            default:
-                fprintf(stderr, "%s: Unknown error number %d returned by solve_sudoku.\n", programname, errnum);
+            case SUDOKU_ABORTED:
+                abort_solve_sudoku = 0;
                 break;
         }
     }
