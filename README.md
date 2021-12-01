@@ -1,6 +1,6 @@
 # Sudoku Solver
 
-Sudoku (数独, sūdoku, digit-single) is a logic-based, combinatorial number-placement puzzle. In classic sudoku, the objective is to fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids that compose the grid (also called "boxes", "blocks", or "regions") contain all of the digits from 1 to 9. The puzzle setter provides a partially completed grid, which for a well-posed puzzle has a single solution. (Wikipedia)
+Sudoku (数独, sūdoku, digit-single) is a logic-based, combinatorial number-placement puzzle. In classic sudoku, the objective is to fill a 9×9 grid with digits so that each column, each row, and each of the nine 3×3 subgrids that compose the grid (also called "boxes", "blocks", or "regions") contain all of the digits from 1 to 9. The puzzle setter provides a partially completed grid, which for a well-posed puzzle has a single solution. ([Wikipedia](https://en.wikipedia.org/w/index.php?title=Sudoku&oldid=1056612563))
 
 ## Solving a sudoku board
 
@@ -27,8 +27,8 @@ Options:
 
 ## Solving random sudoku boards
 
-Generates 10 random input boards and save them to boards.txt.
-The output will be the solution of all the solvable boards.
+Generates 10 random sudoku boards and save them in `boards.txt`.
+Prints the solution to all solvable boards.
 
 ```sh
 randomsudoku -n10 | tee boards.txt | sudokusolver
