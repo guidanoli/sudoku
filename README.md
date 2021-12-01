@@ -13,6 +13,8 @@ If <output-file> is missing, writes solution to stdout
 
 ## Generating a random sudoku board
 
+Keep in mind that not all sudoku boards are solvable.
+
 ```
 Usage: randomsudoku [options]
 
@@ -21,6 +23,15 @@ Options:
   -c[MIN-CELLS]  Set minimum number of filled cells
   -C[MAX-CELLS]  Set maxmimum number of filled cells
   -n[BOARD-CNT]  Number of boards to be generated
+```
+
+## Solving random sudoku boards
+
+Generates 10 random input boards and save them to boards.txt.
+The output will be the solution of all the solvable boards.
+
+```sh
+randomsudoku -n10 | tee boards.txt | sudokusolver
 ```
 
 ## Dependencies
