@@ -9,6 +9,7 @@
 #include <signal.h>
 
 static uint8_t board[9][9];
+static FILE* outfile;
 
 static void sigint_handler(int signo)
 {
@@ -17,30 +18,30 @@ static void sigint_handler(int signo)
 
 static void print_board()
 {
-    putchar('\n');
+    fputc('\n', outfile);
 
     for (uint8_t i = 0; i < 9; ++i)
     {
         for (uint8_t j = 0; j < 9; ++j)
         {
-            printf("%d", board[i][j]);
+            fprintf(outfile, "%d", board[i][j]);
             
             if (j < 8)
             {
-                fputc(' ', stdout);
+                fputc(' ', outfile);
 
                 if (j % 3 == 2)
                 {
-                    fputc(' ', stdout);
+                    fputc(' ', outfile);
                 }
             }
         }
 
-        fputc('\n', stdout);
+        fputc('\n', outfile);
 
         if (i < 8 && i % 3 == 2)
         {
-            fputc('\n', stdout);
+            fputc('\n', outfile);
         }
     }
 }
@@ -48,7 +49,7 @@ static void print_board()
 int main(int argc, char** argv)
 {
     const char* programname;
-    bool canclosefile;
+    bool canclosetestfile, cancloseoutfile;
     FILE* testfile;
     int status = EXIT_SUCCESS;
     struct sudoku_cell badcell;
@@ -66,18 +67,37 @@ int main(int argc, char** argv)
     if (argc < 2)
     {
         testfile = stdin;
-        canclosefile = false;
+        canclosetestfile = false;
     }
     else
     {
         testfile = fopen(argv[1], "r");
-        canclosefile = true;
 
         if (testfile == NULL)
         {
             perror(programname);
             return EXIT_FAILURE;
         }
+
+        canclosetestfile = true;
+    }
+
+    if (argc < 3)
+    {
+        outfile = stdout;
+        cancloseoutfile = false;
+    }
+    else
+    {
+        outfile = fopen(argv[2], "w");
+
+        if (outfile == NULL)
+        {
+            perror(programname);
+            return EXIT_FAILURE;
+        }
+
+        cancloseoutfile = true;
     }
 
     signal(SIGINT, sigint_handler);
@@ -105,16 +125,21 @@ int main(int argc, char** argv)
 
         if (absindex < 81)
         {
-            fprintf(stderr, "%s: Expected board with 81 cells.\n", programname);
+            fprintf(outfile, "%s: Expected board with 81 cells.\n", programname);
             status = EXIT_FAILURE;
             break;
         }
 
-        fprintf(stderr, "\n%d: ", boardindex);
+        if (boardindex > 1)
+        {
+            fputc('\n', outfile);
+        }
+
+        fprintf(outfile, "Board #%d: ", boardindex);
 
         errnum = solve_sudoku(board, &badcell);
 
-        fprintf(stderr, "%s\n", statusdescriptions[errnum]);
+        fprintf(outfile, "%s\n", statusdescriptions[errnum]);
 
         switch (errnum)
         {
@@ -125,20 +150,28 @@ int main(int argc, char** argv)
             case SUDOKU_INVALID_3X3:
             case SUDOKU_INVALID_LINE:
             case SUDOKU_INVALID_COLUMN:
-                fprintf(stderr, "Cell (%" PRIu8 ",%" PRIu8 ") = %" PRIu8 "\n",
+                fprintf(outfile, "Bad cell at (%" PRIu8 ",%" PRIu8 ") with value %" PRIu8 "\n",
                         badcell.i + 1, badcell.j + 1, board[badcell.i][badcell.j]);
                 break;
-            case SUDOKU_UNSOLVABLE:
-                break;
-            case SUDOKU_ABORTED:
-                abort_solve_sudoku = 0;
-                break;
+        }
+
+        if (errnum == SUDOKU_ABORTED)
+        {
+            status = EXIT_FAILURE;
+            break;
         }
     }
 
-    if (canclosefile)
+    if (canclosetestfile)
     {
         fclose(testfile);
+        testfile = NULL;
+    }
+
+    if (cancloseoutfile)
+    {
+        fclose(outfile);
+        outfile = NULL;
     }
 
     return status;
