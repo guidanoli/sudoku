@@ -6,3 +6,6 @@ add_test(NAME RunSolver COMMAND sudokusolver "${INPUT}" "${REAL_OUTPUT}")
 
 add_test(NAME CheckResults COMMAND "${CMAKE_COMMAND}" -E compare_files "${REAL_OUTPUT}" "${EXPECTED_OUTPUT}")
 set_tests_properties(CheckResults PROPERTIES DEPENDS RunSolver)
+
+add_test(NAME CleanUp COMMAND "${CMAKE_COMMAND}" -E remove "${REAL_OUTPUT}")
+set_tests_properties(CleanUp PROPERTIES DEPENDS CheckResults)

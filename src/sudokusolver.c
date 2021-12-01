@@ -1,5 +1,4 @@
 #include "sudoku.h"
-#include "sudokuaux.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -7,6 +6,16 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <signal.h>
+
+static const char* statusdescriptions[SUDOKU_MAX] = {
+    [SUDOKU_OK] = "Ok",
+    [SUDOKU_INVALID_CELL] = "Invalid cell",
+    [SUDOKU_INVALID_3X3] = "Invalid 3x3",
+    [SUDOKU_INVALID_LINE] = "Invalid line",
+    [SUDOKU_INVALID_COLUMN] = "Invalid column",
+    [SUDOKU_UNSOLVABLE] = "Unsolvable",
+    [SUDOKU_ABORTED] = "Aborted",
+};
 
 static uint8_t board[9][9];
 static FILE* outfile;
